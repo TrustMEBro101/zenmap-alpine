@@ -5,6 +5,7 @@ from gi.repository import Gtk, GLib
 import subprocess
 import threading
 import re
+import shlex
 
 
 PROFILES = {
@@ -73,7 +74,7 @@ class ZenmapAlpine(Gtk.Window):
         top.attach(command_label, 0, 1, 1, 1)
 
         self.command = Gtk.Entry()
-        self.command.set_editable(False)
+        self.command.set_editable(True)
         self.command.set_hexpand(True)
         top.attach(self.command, 1, 1, 8, 1)
 
@@ -179,8 +180,23 @@ class ZenmapAlpine(Gtk.Window):
             self.target.grab_focus()
             return
 
-        command = self.get_command()
-        self.update_command()
+        command_text = self.command.get_text().strip()
+        if not command_text:
+            self.status.set_text("Enter an Nmap command first.")
+            self.command.grab_focus()
+            return
+
+        try:
+            command = shlex.split(command_text)
+        except ValueError as exc:
+            self.status.set_text(f"Invalid command: {exc}")
+            self.command.grab_focus()
+            return
+
+        if not command or command[0] != "nmap":
+            self.status.set_text("Command must start with nmap.")
+            self.command.grab_focus()
+            return
 
         self.output_lines = []
         self.set_text(self.output_view, "")
